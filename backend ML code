@@ -1,0 +1,27 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import sklearn as sk
+import pickle
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.preprocessing import LabelEncoder
+df=pd.read_csv("/content/predictive_maintenance_100k.csv")
+from sklearn.preprocessing import LabelEncoder
+le=LabelEncoder()
+df['failed_now']=le.fit_transform(df['failed_now'])
+x=df[["time_step","Tempreature in Celcius","vibration_rms","pressure_bar","rpm","load_pct","health_index","RUL_hours"]]
+y=df["failed_now"]
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.ensemble import RandomForestClassifier
+model=RandomForestClassifier()
+a={'n_estimators':[50,100,200],
+   'max_depth':[5,10,20]}
+grid=RandomizedSearchCV(model,a,cv=3,n_iter=8)
+grid.fit(x_train,y_train)
+best_model = grid.best_estimator_
+Y_pred = best_model.predict(x_test)
+ac=accuracy_score(y_test,Y_pred)
+ac
