@@ -1,0 +1,62 @@
+import numpy as np
+import pandas as pd
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+import gradio as gr
+
+
+# Load dataset
+df = pd.read_csv("/content/predictive_maintenance_100k.csv")
+
+# Encode target
+le = LabelEncoder()
+df['failed_now'] = le.fit_transform(df['failed_now'])
+
+# Features and Target
+X = df[["time_step", "Tempreature in Celcius", "vibration_rms", "pressure_bar", "rpm", "load_pct", "health_index", "RUL_hours"]]
+y = df["failed_now"]
+
+# Train-Test Split
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train Model
+model = xgb.XGBClassifier()
+model.fit(x_train, y_train)
+
+# Accuracy
+Y_pred = model.predict(x_test)
+ac = accuracy_score(y_test, Y_pred)
+print(f"Model Accuracy: {ac:.2f}")
+
+
+def predict_failure(time_step, temp_c, vibration, pressure, rpm, load_pct, health_index, RUL_hours):
+    features = np.array([[time_step, temp_c, vibration, pressure, rpm, load_pct, health_index, RUL_hours]])
+    prediction = model.predict(features)[0]
+    result = "Failure Now" if prediction == 1 else "No Failure"
+    return result
+
+
+inputs = [
+    gr.Number(label="Time Step"),
+    gr.Number(label="Temperature (°C)"),
+    gr.Number(label="Vibration RMS"),
+    gr.Number(label="Pressure (bar)"),
+    gr.Number(label="RPM"),
+    gr.Number(label="Load (%)"),
+    gr.Number(label="Health Index"),
+    gr.Number(label="RUL (hours)")
+]
+
+output = gr.Textbox(label="Prediction")
+
+app = gr.Interface(
+    fn=predict_failure,
+    inputs=inputs,
+    outputs=output,
+    title="Predictive Maintenance - Failure Prediction",
+    description=f"Enter machine parameters to predict if it will fail now. Model Accuracy: {ac:.2f}"
+)
+
+app.launch()
